@@ -1,0 +1,72 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.remote.app'
+    
+    compileSdk 34  // Android 14
+    buildToolsVersion '34.0.0'
+
+    defaultConfig {
+        applicationId 'com.remote.app'
+        minSdk 21        // Android 5.0 (API 21) 最低支持
+        targetSdk 34     // Android 14 (API 34) 目标
+        versionCode 3
+        versionName "3.0"
+        
+        // 针对新版 Android 的优化
+        vectorDrawables.useSupportLibrary = true
+    }
+
+    buildFeatures {
+        aidl = true
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            debuggable false
+        }
+        debug {
+            minifyEnabled false
+            debuggable true
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+    
+    // 解决新版 Gradle 的警告
+    lintOptions {
+        checkReleaseBuilds false
+        abortOnError false
+        disable 'MissingTranslation', 'ExtraTranslation'
+    }
+}
+
+dependencies {
+    // 本地 JAR 库
+    implementation fileTree(dir: 'libs', include: ['*.jar'])
+
+    // Socket.IO 客户端 - 最新稳定版本 (2.1.1)
+    implementation ('io.socket:socket.io-client:2.1.1') {
+        exclude group: 'org.json', module: 'json'
+    }
+
+    // AndroidX 库 - 替代已弃用的 support 库
+    implementation 'androidx.core:core:1.13.1'
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+    implementation 'androidx.activity:activity:1.9.0'
+    implementation 'androidx.fragment:fragment:1.7.0'
+    
+    // OkHttp - 新版 HTTP 客户端 (socket.io 依赖)
+    implementation 'com.squareup.okhttp3:okhttp:4.12.0'
+    
+    // JSON 处理
+    implementation 'org.json:json:20240303'
+}

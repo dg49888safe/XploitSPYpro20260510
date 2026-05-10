@@ -1,0 +1,49 @@
+apply plugin: 'com.android.application'
+
+android {
+    lintOptions {
+        checkReleaseBuilds false
+        abortOnError false
+    }
+    // 2026年标准 - Android 14 (API 34)
+    compileSdkVersion 34
+    buildToolsVersion '34.0.0'
+    namespace 'com.remote.app'
+
+    defaultConfig {
+        applicationId 'com.remote.app'
+        minSdkVersion 21      // Android 5.0 最低支持
+        targetSdkVersion 34   // Android 14 目标
+        versionCode 2
+        versionName "2.0"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+        debug {
+            minifyEnabled false
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+}
+
+dependencies {
+    implementation fileTree(dir: 'libs', include: ['*.jar'])
+
+    // 更新 socket.io 到最新稳定版 (2026)
+    implementation ('io.socket:socket.io-client:2.1.0') {
+        exclude group: 'org.json', module: 'json'
+    }
+
+    // AndroidX 替代已弃用的 support 库
+    implementation 'androidx.core:core:1.12.0'
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+}
