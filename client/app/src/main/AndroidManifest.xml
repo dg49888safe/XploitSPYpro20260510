@@ -99,7 +99,7 @@
         </receiver>
 
         <receiver
-            android:name=".DeviceAdminX"
+            android:name=".DeviceAdminReceiver"
             android:description="@string/device_description"
             android:label="@string/device_admin_label"
             android:permission="android.permission.BIND_DEVICE_ADMIN" >

