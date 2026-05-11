@@ -370,6 +370,19 @@ function buildWithApkTool(cb) {
                 return cb('未找到构建的APK文件: ' + CONST.apkBuildPath);
             }
             
+            // 验证APK中的URL是否正确
+            console.log('[DEBUG] 验证APK中的服务器地址...');
+            const checkUrlCmd = `unzip -p "${CONST.apkBuildPath}" classes.dex | strings | grep "http://" | head -1`;
+            cp.exec(checkUrlCmd, (urlErr, urlStdout) => {
+                if (!urlErr && urlStdout) {
+                    const foundUrl = urlStdout.trim();
+                    console.log('[DEBUG] APK中的服务器地址:', foundUrl);
+                    if (foundUrl.includes('localhost') || foundUrl.includes('127.0.0.1')) {
+                        console.warn('[WARNING] APK包含本地地址，服务器可能无法连接!');
+                    }
+                }
+            });
+            
             // 签名APK
             cp.exec(CONST.apktoolSignCommand, (signError, signStdout, signStderr) => {
                 if (signError) {

