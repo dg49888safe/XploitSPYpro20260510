@@ -1,0 +1,39 @@
+<br>
+<div class="ui secondary menu">
+    <div class="header item"><img src="/logo.png" style="width: 100px"></div>
+    <a href="/panel" class="item">
+        <i class="icon mobile alternate"></i>&nbsp;&nbsp; <%= t('nav.devices') %>
+    </a>
+
+    <a href="/builder" class="item">
+        <i class="icon wrench"></i>&nbsp;&nbsp; <%= t('nav.apkBuilder') %>
+    </a>
+
+    <a href="/changepass" class="item">
+        <i class="icon wrench"></i>&nbsp;&nbsp; <%= t('nav.changePassword') %>
+    </a>
+
+    <a href="/logs" class="item">
+        <i class="icon terminal"></i>&nbsp;&nbsp; <%= t('nav.eventLog') %>
+    </a>
+    <div class="right menu">
+        <div class="item">
+            <div class="ui simple dropdown">
+                <div class="text">🌐 <%= i18n.lang %></div>
+                <i class="dropdown icon"></i>
+                <div class="menu">
+                    <% availableLangs.forEach(function(lang) { %>
+                        <a class="item <%= locale === lang.code ? 'active' : '' %>" href="?lang=<%= lang.code %>">
+                            <%= lang.name %>
+                        </a>
+                    <% }); %>
+                </div>
+            </div>
+        </div>
+        <a href="/logout" class="ui item">
+            <i class="icon door"></i>&nbsp;&nbsp; <%= t('nav.logout') %>
+    </a>
+    </div>
+</div>
+<div class="ui divider"></div>
+<br>

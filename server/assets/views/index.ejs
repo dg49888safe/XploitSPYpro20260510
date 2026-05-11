@@ -1,26 +1,31 @@
 <!DOCTYPE html>
-<html>
+<html lang="<%= locale %>">
 
-<% include partials/head.ejs %>
+<% include partials/head_i18n.ejs %>
 
 
     <body>
         <div class="ui container" style="color: azure; background-color: black;">
-            <% include partials/header.ejs %>
-            <% include partials/disclaimer.ejs %> 
+            <% include partials/header_i18n.ejs %>
+            <% include partials/disclaimer.ejs %>
+            <div style="text-align: right; padding: 10px;">
+                <a href="/?lang=<%= locale === 'en' ? 'zh' : 'en' %>" class="ui basic small button">
+                    🌐 <%= locale === 'en' ? '简体中文' : 'English' %>
+                </a>
+            </div> 
                 <div class="ui segment">
 
-                    <h3 class="ui grey dividing header">Online</h3>
+                    <h3 class="ui grey dividing header"><%= locale === 'zh' ? '在线设备' : 'Online Devices' %></h3>
 
                     <table class="ui celled table">
                         <thead>
                             <tr>
-                                <th>Name</th>
-                                <th>Country</th>
+                                <th><%= locale === 'zh' ? '设备ID' : 'Device ID' %></th>
+                                <th><%= locale === 'zh' ? '国家' : 'Country' %></th>
                                 <th>IP</th>
-                                <th>Device</th>
-                                <th>Last Seen</th>
-                                <th>Manage</th>
+                                <th><%= locale === 'zh' ? '设备型号' : 'Device Model' %></th>
+                                <th><%= locale === 'zh' ? '最后在线' : 'Last Seen' %></th>
+                                <th><%= locale === 'zh' ? '管理' : 'Manage' %></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -45,7 +50,7 @@
                                     <td class="collapsing">
                                         <%= lsdate.toLocaleString('en-GB', { timeZone: 'UTC' }) %>
                                     </td>
-                                    <td class="collapsing"><a href="/manage/<%= item.clientID %>/info" class="ui button blue">Manage</a>
+                                    <td class="collapsing"><a href="/manage/<%= item.clientID %>/info&lang=<%= locale %>" class="ui button blue"><%= locale === 'zh' ? '管理' : 'Manage' %></a>
                                     </td>
                                 </tr>
                                 <% }) %>
@@ -53,16 +58,16 @@
                     </table>
 
 
-                    <h3 class="ui grey dividing header">Offline</h3>
+                    <h3 class="ui grey dividing header"><%= locale === 'zh' ? '离线设备' : 'Offline Devices' %></h3>
                     <table class="ui celled table">
                         <thead>
                             <tr>
-                                <th>Name</th>
-                                <th>Country</th>
+                                <th><%= locale === 'zh' ? '设备ID' : 'Device ID' %></th>
+                                <th><%= locale === 'zh' ? '国家' : 'Country' %></th>
                                 <th>IP</th>
-                                <th>Device</th>
-                                <th>Last Seen</th>
-                                <th>Manage</th>
+                                <th><%= locale === 'zh' ? '设备型号' : 'Device Model' %></th>
+                                <th><%= locale === 'zh' ? '最后在线' : 'Last Seen' %></th>
+                                <th><%= locale === 'zh' ? '管理' : 'Manage' %></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -87,7 +92,7 @@
                                     <td class="collapsing">
                                         <%= lsdate.toLocaleString('en-GB', { timeZone: 'UTC' }) %>
                                     </td>
-                                    <td class="collapsing"><a href="/manage/<%= item.clientID %>/info" class="ui button blue">Manage</a>
+                                    <td class="collapsing"><a href="/manage/<%= item.clientID %>/info&lang=<%= locale %>" class="ui button blue"><%= locale === 'zh' ? '管理' : 'Manage' %></a>
                                     </td>
                                 </tr>
                                 <% }) %>

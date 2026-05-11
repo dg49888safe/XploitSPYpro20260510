@@ -10,11 +10,13 @@ const express = require('express'),
 	IO = require('socket.io')(server),
 	path = require('path'),
 	geoip = require('geoip-lite'),
+	cookieParser = require('cookie-parser'),
 	CONST = require(path.join(__dirname, '/includes/const')),
 	db = require(path.join(__dirname, '/includes/databaseGateway')),
 	logManager = require(path.join(__dirname, '/includes/logManager')),
 	clientManager = new (require(path.join(__dirname, '/includes/clientManager')))(db),
-	apkBuilder = require(path.join(__dirname, '/includes/apkBuilder'));
+	apkBuilder = require(path.join(__dirname, '/includes/apkBuilder')),
+	i18n = require(path.join(__dirname, '/includes/i18n'));
 port = process.env.PORT || CONST.web_port;
 
 global.CONST = CONST;
@@ -68,7 +70,9 @@ IO.on('connection', (socket) => {
 // app.listen(CONST.web_port);
 server.listen(port, () => console.log(`listening on port ${port}`));
 
+app.use(cookieParser());
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, '/assets/views'));
 app.use(express.static(__dirname + '/assets/webpublic'));
+app.use(i18n);  // 多语言中间件
 app.use(require(path.join(__dirname, '/includes/expressRoutes')));

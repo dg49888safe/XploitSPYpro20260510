@@ -1,17 +1,18 @@
 <!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<html>
-	<% include partials/head.ejs %>
+<html lang="<%= locale %>">
+	<% include partials/head_i18n.ejs %>
 
 	<body>
 		<div class="ui container">
-			<% include partials/header.ejs %> <% include partials/disclaimer.ejs %>
+			<% include partials/header_i18n.ejs %> <% include partials/disclaimer.ejs %>
 			<div class="ui segment">
 				<div id="dimmer" class="ui dimmer">
 					<div class="ui indeterminate text loader" id="loadingText">Submitting</div>
 				</div>
 
-				<h1 class="ui" style="text-align: center;">APK Builder</h1>
+				<h1 class="ui" style="text-align: center;"><%= t('builder.title') %></h1>
+				<p style="text-align: center; color: #666;"><%= t('builder.subtitle') %></p>
 				<div class="ui form" id="form">
 					<div class="inline fields">
 						<div class="six wide field">
@@ -22,8 +23,8 @@
 								<input
 									type="text"
 									id="uriInput"
-									placeholder="IP / Public URL"
-									title="This is the public url of your server (domain.com)"
+									placeholder="<%= locale === 'zh' ? 'IP / 公网地址' : 'IP / Public URL' %>"
+									title="<%= locale === 'zh' ? '这是您服务器的公网地址 (domain.com)' : 'This is the public url of your server (domain.com)' %>"
 								/>
 							</div>
 						</div>
@@ -34,8 +35,13 @@
 					</div>
 					<div class="inline fields">
 						<div class="eight wide field">
-							<button id="gobuild" class="positive ui fluid button"><i class="wrench icon"></i>Build</button>
+							<button id="gobuild" class="positive ui fluid button"><i class="wrench icon"></i><%= t('builder.buildButton') %></button>
 						</div>
+					</div>
+					<div style="text-align: center; margin-top: 10px;">
+						<a href="?lang=<%= locale === 'en' ? 'zh' : 'en' %>" class="ui basic small button">
+							🌐 <%= locale === 'en' ? '简体中文' : 'English' %>
+						</a>
 					</div>
 				</div>
 
@@ -43,7 +49,7 @@
 					<div class="inline fields">
 						<div class="eight wide field">
 							<a class="blue ui fluid button" download="XploitSPY.apk" href="/build-aligned-signed.apk"
-								><i class="download icon"></i>Download</a
+								><i class="download icon"></i><%= t('builder.download') %></a
 							>
 						</div>
 					</div>
@@ -57,14 +63,10 @@
 		</style>
 
 		<script>
-			var loadingTexts = [
-				'Decompiling APK',
-				'Patching Server Information',
-				'Compiling APK',
-				'Signing APK',
-				'Verifying Build',
-				'Finalizing',
-			];
+			var loadingTexts = <%- JSON.stringify(locale === 'zh' ? 
+				['反编译APK', '修补服务器信息', '编译APK', '签名APK', '验证构建', '完成中'] :
+				['Decompiling APK', 'Patching Server Information', 'Compiling APK', 'Signing APK', 'Verifying Build', 'Finalizing']
+			) %>;
 
 			document.getElementById('uriInput').value = window.location.hostname;
 

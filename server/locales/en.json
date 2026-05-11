@@ -1,0 +1,47 @@
+{
+  "lang": "English",
+  "nav": {
+    "features": "Features",
+    "pricing": "Pricing",
+    "login": "Login",
+    "logout": "Logout",
+    "devices": "Devices",
+    "apkBuilder": "APK Builder",
+    "changePassword": "Change Password",
+    "eventLog": "Event Log"
+  },
+  "welcome": {
+    "title": "DISCLAIMER",
+    "subtitle": "XploitWizer Provides no warranty with this software and will not be responsible for any direct or indirect damage caused due to the usage of this tool.",
+    "educational": "XploitSPY is built for Educational Purpose. Use at your own Risk.",
+    "loginButton": "Login",
+    "registerButton": "Register"
+  },
+  "login": {
+    "title": "Login to XploitSPY",
+    "username": "Username",
+    "password": "Password",
+    "loginButton": "Login",
+    "error": "Invalid credentials"
+  },
+  "builder": {
+    "title": "APK Builder",
+    "subtitle": "Build your custom APK with C2 server configuration",
+    "serverUrl": "Server URL",
+    "serverPort": "Server Port",
+    "buildButton": "Build APK",
+    "building": "Building...",
+    "success": "Build Successful!",
+    "download": "Download APK"
+  },
+  "devices": {
+    "title": "Connected Devices",
+    "noDevices": "No devices connected",
+    "deviceInfo": "Device Information",
+    "lastSeen": "Last Seen",
+    "actions": "Actions"
+  },
+  "footer": {
+    "copyright": "Made with ❤ By XploitWizer"
+  }
+}

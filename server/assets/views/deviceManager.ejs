@@ -1,15 +1,21 @@
 <!DOCTYPE html>
-<html>
+<html lang="<%= locale %>">
 
-<% include partials/head.ejs %>
+<% include partials/head_i18n.ejs %>
 
     <body>
         <script>
             var baseURL = '<%= baseURL %>';
+            var currentLocale = '<%= locale %>';
         </script>
         <div class="ui container">
-            <% include partials/header.ejs %>
-            <% include partials/disclaimer.ejs %> 
+            <% include partials/header_i18n.ejs %>
+            <% include partials/disclaimer.ejs %>
+            <div style="text-align: right; padding: 10px;">
+                <a href="?page=<%= page %>&lang=<%= locale === 'en' ? 'zh' : 'en' %>" class="ui basic small button">
+                    🌐 <%= locale === 'en' ? '简体中文' : 'English' %>
+                </a>
+            </div> 
                 <div class="ui grid">
                     <% include partials/deviceManagerMenu.ejs %>
                         <div class="twelve wide column">
