@@ -97,8 +97,43 @@ function recompileAPK(callback) {
         
         console.log('[DEBUG] APK反编译成功');
         console.log('[DEBUG] 新decompiled目录存在:', fs.existsSync(CONST.smaliPath));
-        return callback(false);
+        
+        // 更新apktool.yml中的SDK版本信息
+        updateApkToolYml((err) => {
+            if (err) console.log('[DEBUG] 更新apktool.yml警告:', err);
+            return callback(false);
+        });
     });
+}
+
+/**
+ * 更新apktool.yml中的SDK版本信息
+ * @param {function} callback - 回调函数
+ */
+function updateApkToolYml(callback) {
+    const ymlPath = path.join(CONST.smaliPath, 'apktool.yml');
+    
+    if (!fs.existsSync(ymlPath)) {
+        return callback('apktool.yml不存在');
+    }
+    
+    try {
+        let content = fs.readFileSync(ymlPath, 'utf8');
+        
+        // 更新targetSdkVersion到34
+        content = content.replace(/targetSdkVersion: '\d+'/, "targetSdkVersion: '34'");
+        // 更新minSdkVersion到21（保持兼容性）
+        content = content.replace(/minSdkVersion: '\d+'/, "minSdkVersion: '21'");
+        // 更新versionCode
+        content = content.replace(/versionCode: '\d+'/, "versionCode: '3'");
+        content = content.replace(/versionName: "[^"]*"/, 'versionName: "3.0"');
+        
+        fs.writeFileSync(ymlPath, content, 'utf8');
+        console.log('[DEBUG] 已更新apktool.yml SDK版本为34');
+        return callback(false);
+    } catch (e) {
+        return callback('更新apktool.yml失败: ' + e.message);
+    }
 }
 
 /**
@@ -150,6 +185,11 @@ function findSmaliWithServerUrl(dir) {
  * @param {function} callback - 回调函数
  */
 function patchApkTool(URI, PORT, callback) {
+    // 首先更新apktool.yml中的SDK版本（确保targetSdk为34）
+    updateApkToolYml((err) => {
+        if (err) console.log('[DEBUG] 更新apktool.yml警告:', err);
+    });
+    
     // 首先尝试已知位置
     const smaliBasePath = path.join(CONST.smaliPath, 'smali');
     const configSmaliPath = path.join(smaliBasePath, 'com/remote/app/Config.smali');
