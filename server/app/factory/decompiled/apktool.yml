@@ -1,24 +1,16 @@
-!!brut.androlib.meta.MetaInfo
+version: 3.0.2
 apkFileName: app-release.apk
-compressionType: false
-doNotCompress:
-- resources.arsc
-- png
-isFrameworkApk: false
-packageInfo:
-  forcedPackageId: '127'
-  renameManifestPackage: null
-sdkInfo:
-  minSdkVersion: '14'
-  targetSdkVersion: '21'
-sharedLibrary: false
-sparseResources: false
-unknownFiles: {}
 usesFramework:
   ids:
   - 1
-  tag: null
-version: 2.4.1
+sdkInfo:
+  minSdkVersion: 14
+  targetSdkVersion: 21
 versionInfo:
-  versionCode: '1'
-  versionName: '1.0'
+  versionCode: 1
+  versionName: 1.0
+resourcesInfo:
+  packageId: 127
+doNotCompress:
+- arsc
+- png

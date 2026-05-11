@@ -1,14 +1,14 @@
-.class Lb/a/d/a/a/b;
+.class Lb/a/d/a/a/B;
 .super Ljava/lang/Object;
 .source ""
 
 # interfaces
-.implements Lb/a/c/a$a;
+.implements Ljava/lang/Runnable;
 
 
 # annotations
 .annotation system Ldalvik/annotation/EnclosingMethod;
-    value = Lb/a/d/a/a/d;->run()V
+    value = Lb/a/d/a/a/C;->a(Lc/L;Ljava/lang/Throwable;Lc/G;)V
 .end annotation
 
 .annotation system Ldalvik/annotation/InnerClass;
@@ -18,22 +18,18 @@
 
 
 # instance fields
-.field final synthetic a:[I
+.field final synthetic a:Ljava/lang/Throwable;
 
-.field final synthetic b:Ljava/lang/Runnable;
-
-.field final synthetic c:Lb/a/d/a/a/d;
+.field final synthetic b:Lb/a/d/a/a/C;
 
 
 # direct methods
-.method constructor <init>(Lb/a/d/a/a/d;[ILjava/lang/Runnable;)V
+.method constructor <init>(Lb/a/d/a/a/C;Ljava/lang/Throwable;)V
     .locals 0
 
-    iput-object p1, p0, Lb/a/d/a/a/b;->c:Lb/a/d/a/a/d;
+    iput-object p1, p0, Lb/a/d/a/a/B;->b:Lb/a/d/a/a/C;
 
-    iput-object p2, p0, Lb/a/d/a/a/b;->a:[I
-
-    iput-object p3, p0, Lb/a/d/a/a/b;->b:Ljava/lang/Runnable;
+    iput-object p2, p0, Lb/a/d/a/a/B;->a:Ljava/lang/Throwable;
 
     invoke-direct {p0}, Ljava/lang/Object;-><init>()V
 
@@ -42,33 +38,20 @@
 
 
 # virtual methods
-.method public varargs a([Ljava/lang/Object;)V
-    .locals 2
+.method public run()V
+    .locals 3
 
-    invoke-static {}, Lb/a/d/a/a/i;->h()Ljava/util/logging/Logger;
+    iget-object v0, p0, Lb/a/d/a/a/B;->b:Lb/a/d/a/a/C;
 
-    move-result-object p1
+    iget-object v0, v0, Lb/a/d/a/a/C;->a:Lb/a/d/a/a/G;
 
-    const-string v0, "pre-pause polling complete"
+    iget-object v1, p0, Lb/a/d/a/a/B;->a:Ljava/lang/Throwable;
 
-    invoke-virtual {p1, v0}, Ljava/util/logging/Logger;->fine(Ljava/lang/String;)V
+    check-cast v1, Ljava/lang/Exception;
 
-    iget-object p1, p0, Lb/a/d/a/a/b;->a:[I
+    const-string v2, "websocket error"
 
-    const/4 v0, 0x0
+    invoke-static {v0, v2, v1}, Lb/a/d/a/a/G;->a(Lb/a/d/a/a/G;Ljava/lang/String;Ljava/lang/Exception;)Lb/a/d/a/K;
 
-    aget v1, p1, v0
-
-    add-int/lit8 v1, v1, -0x1
-
-    aput v1, p1, v0
-
-    if-nez v1, :cond_0
-
-    iget-object p1, p0, Lb/a/d/a/a/b;->b:Ljava/lang/Runnable;
-
-    invoke-interface {p1}, Ljava/lang/Runnable;->run()V
-
-    :cond_0
     return-void
 .end method
