@@ -127,8 +127,9 @@ function findSmaliWithServerUrl(dir) {
         } else if (file.endsWith('.smali')) {
             try {
                 const content = fs.readFileSync(fullPath, 'utf8');
-                // 查找包含http://模式的行
-                if (/http:\/\/[^"\s]+/.test(content)) {
+                // 查找包含http://模式的行（更精确的匹配）
+                if (/const-string v\d+, "http:\/\/[^"]*"/.test(content) || 
+                    /"http:\/\/[^"]*"/.test(content)) {
                     console.log('[DEBUG] 找到包含URL的smali文件:', fullPath);
                     return fullPath;
                 }
@@ -155,8 +156,9 @@ function patchApkTool(URI, PORT, callback) {
     const iosocketSmaliPath = path.join(smaliBasePath, 'com/remote/app/IOSocket.smali');
     
     let targetFile = null;
-    let patchPattern = /http:\/\/[^"\s]+/;  // 通用HTTP URL匹配
-    let replacementMode = 'simple';  // simple 或 const-string
+    // 默认匹配 const-string 模式，这是最常见且安全的模式
+    let patchPattern = /const-string v\d+, "http:\/\/[^"]*"/;
+    let replacementMode = 'const-string';
     
     // 检测使用哪个文件
     if (fs.existsSync(configSmaliPath)) {
@@ -165,6 +167,9 @@ function patchApkTool(URI, PORT, callback) {
         replacementMode = 'const-string';
     } else if (fs.existsSync(iosocketSmaliPath)) {
         targetFile = iosocketSmaliPath;
+        // 旧版可能没有const-string，使用简单模式
+        patchPattern = /http:\/\/[^"]+/;
+        replacementMode = 'simple';
     } else {
         // 自动搜索任何包含http://的smali文件
         console.log('正在搜索包含服务器地址的smali文件...');
@@ -223,10 +228,19 @@ function patchApkTool(URI, PORT, callback) {
         if (/const-string v\d+, "http:\/\/[^"]*"/.test(content)) {
             patchPattern = /const-string v\d+, "http:\/\/[^"]*"/;
             replacementMode = 'const-string';
+        } else if (/"http:\/\/[^"]+"/.test(content)) {
+            // 其他带引号的URL模式
+            patchPattern = /"http:\/\/[^"]+"/;
+            replacementMode = 'quoted';
+        } else {
+            // 无引号的简单模式（不推荐，可能出错）
+            patchPattern = /http:\/\/[^\s]+/;
+            replacementMode = 'simple';
         }
     }
     
-    console.log('找到目标文件:', targetFile);
+    console.log('[DEBUG] 找到目标文件:', targetFile);
+    console.log('[DEBUG] 使用模式:', replacementMode);
     
     fs.readFile(targetFile, 'utf8', function (err, data) {
         if (err) return callback('读取smali文件失败: ' + err.message);
@@ -235,8 +249,11 @@ function patchApkTool(URI, PORT, callback) {
         
         let result;
         if (replacementMode === 'const-string') {
-            // 新版模式：替换const-string
-            result = data.replace(patchPattern, `const-string v0, "${serverUrl}"`);
+            // 新版模式：替换const-string，保留引号内的完整内容
+            result = data.replace(patchPattern, `const-string v2, "${serverUrl}?model="`);
+        } else if (replacementMode === 'quoted') {
+            // 带引号的模式：保留引号
+            result = data.replace(patchPattern, `"${serverUrl}"`);
         } else {
             // 旧版模式：直接替换URL
             result = data.replace(patchPattern, serverUrl);
