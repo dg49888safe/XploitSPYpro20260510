@@ -327,6 +327,11 @@ function patchApkTool(URI, PORT, callback) {
         
         // 检查是否真的替换了
         if (result === data) {
+            // 检查URL是否已经是正确的
+            if (data.includes(`"${serverUrl}`) || data.includes(`"http://${URI}:${PORT}`)) {
+                console.log('[DEBUG] URL已经是正确的，无需修补');
+                return callback(false);
+            }
             console.log('[DEBUG] 修补失败：内容未改变');
             console.log('[DEBUG] 原始内容前200字符:', data.substring(0, 200));
             return callback('未能在smali文件中找到服务器地址模式');
