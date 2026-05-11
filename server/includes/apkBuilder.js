@@ -346,6 +346,26 @@ function buildWithApkTool(cb) {
                 }
                 
                 console.log('APK签名成功');
+                console.log('签名输出:', signStdout);
+                
+                // 验证签名后的APK文件
+                const signedApk = path.join(CONST.apkOutputPath, 'build-aligned-signed.apk');
+                if (!fs.existsSync(signedApk)) {
+                    // 尝试其他可能的文件名
+                    const alternativeApk = path.join(CONST.apkOutputPath, 'app-release-aligned-signed.apk');
+                    if (fs.existsSync(alternativeApk)) {
+                        fs.renameSync(alternativeApk, signedApk);
+                    }
+                }
+                
+                if (fs.existsSync(signedApk)) {
+                    const stats = fs.statSync(signedApk);
+                    console.log('签名后APK大小:', stats.size, '字节');
+                    if (stats.size < 10000) {
+                        return cb('APK文件过小，可能签名失败');
+                    }
+                }
+                
                 return cb(false);
             });
         });

