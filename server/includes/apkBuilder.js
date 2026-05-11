@@ -63,7 +63,7 @@ function canUseApkTool() {
  * @param {string} PORT - 服务器端口
  * @param {function} cb - 回调函数
  */
-function patchApkTool(URI, PORT, cb) {
+function patchApkTool(URI, PORT, callback) {
     // 首先尝试Config.smali（新版代码结构）
     const configSmaliPath = path.join(CONST.smaliPath, '/smali/com/remote/app/Config.smali');
     const iosocketSmaliPath = CONST.patchFilePath;
@@ -82,11 +82,11 @@ function patchApkTool(URI, PORT, cb) {
         patchPattern = /http:\/\/[^"?]+(?::\d+)?/;
     } else {
         // 搜索任何包含http://的smali文件
-        return cb('未找到可修补的smali文件，请确保decompiled目录存在');
+        return callback('未找到可修补的smali文件，请确保decompiled目录存在');
     }
     
     fs.readFile(targetFile, 'utf8', function (err, data) {
-        if (err) return cb('读取smali文件失败: ' + err.message);
+        if (err) return callback('读取smali文件失败: ' + err.message);
         
         const serverUrl = `http://${URI}:${PORT}`;
         
@@ -101,13 +101,13 @@ function patchApkTool(URI, PORT, cb) {
         
         // 检查是否真的替换了
         if (result === data) {
-            return cb('未能在smali文件中找到服务器地址模式');
+            return callback('未能在smali文件中找到服务器地址模式');
         }
         
         fs.writeFile(targetFile, result, 'utf8', function (err) {
-            if (err) return cb('写入smali文件失败: ' + err.message);
+            if (err) return callback('写入smali文件失败: ' + err.message);
             console.log('已修补smali文件:', targetFile);
-            return cb(false);
+            return callback(false);
         });
     });
 }
