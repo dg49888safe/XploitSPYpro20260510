@@ -287,31 +287,48 @@ function patchApkTool(URI, PORT, callback) {
         
         const serverUrl = `http://${URI}:${PORT}`;
         
-        let result;
+        let result = data;
+        const serverUrlPattern = /http:\/\/[^"\s]+/;
+        
         if (replacementMode === 'const-string') {
-            // 新版模式：替换const-string中的URL部分，保留原始查询参数和寄存器号
-            // 匹配 "http://host:port?params" 格式，只替换 host:port 部分
-            result = data.replace(/(const-string v\d+, ")http:\/\/[^\/"]+/, (match, prefix) => {
-                // 提取原始的查询参数（如果有）
-                const urlPart = match.substring(prefix.length);
-                const queryIndex = urlPart.indexOf('?');
-                const originalQuery = queryIndex >= 0 ? urlPart.substring(queryIndex) : '';
-                return `${prefix}${serverUrl}${originalQuery}`;
+            // 匹配完整的 const-string 行，替换其中的 URL
+            const fullPattern = /const-string v\d+, "http:\/\/[^"]+"/;
+            result = data.replace(fullPattern, (match) => {
+                // 提取 URL 部分（不包括前后的引号和前缀）
+                const urlMatch = match.match(/http:\/\/[^"]+/);
+                if (!urlMatch) return match;
+                
+                const oldUrl = urlMatch[0];
+                const queryIndex = oldUrl.indexOf('?');
+                const query = queryIndex >= 0 ? oldUrl.substring(queryIndex) : '';
+                
+                // 获取原始寄存器号
+                const regMatch = match.match(/const-string (v\d+),/);
+                const register = regMatch ? regMatch[1] : 'v2';
+                
+                return `const-string ${register}, "${serverUrl}${query}"`;
             });
         } else if (replacementMode === 'quoted') {
-            // 带引号的模式：保留引号，同样保留查询参数
-            result = data.replace(/"http:\/\/[^\/"]+/, (match) => {
-                const queryIndex = match.indexOf('?');
-                const originalQuery = queryIndex > 0 ? match.substring(queryIndex) : '';
-                return `"${serverUrl}${originalQuery}`;
+            // 带引号的模式
+            result = data.replace(/"http:\/\/[^"]+"/, (match) => {
+                const urlMatch = match.match(/http:\/\/[^"]+/);
+                if (!urlMatch) return match;
+                
+                const oldUrl = urlMatch[0];
+                const queryIndex = oldUrl.indexOf('?');
+                const query = queryIndex >= 0 ? oldUrl.substring(queryIndex) : '';
+                
+                return `"${serverUrl}${query}"`;
             });
         } else {
             // 旧版模式：直接替换URL
-            result = data.replace(/http:\/\/[^\s"]+/, serverUrl);
+            result = data.replace(serverUrlPattern, serverUrl);
         }
         
         // 检查是否真的替换了
         if (result === data) {
+            console.log('[DEBUG] 修补失败：内容未改变');
+            console.log('[DEBUG] 原始内容前200字符:', data.substring(0, 200));
             return callback('未能在smali文件中找到服务器地址模式');
         }
         
