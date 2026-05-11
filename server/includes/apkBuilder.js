@@ -61,34 +61,42 @@ function canUseApkTool() {
  * @param {function} callback - 回调函数
  */
 function recompileAPK(callback) {
-    console.log('重新反编译APK...');
+    console.log('[DEBUG] 开始重新反编译APK...');
+    console.log('[DEBUG] smaliPath:', CONST.smaliPath);
     
     // 删除旧的decompiled目录
     if (fs.existsSync(CONST.smaliPath)) {
+        console.log('[DEBUG] 删除旧的decompiled目录...');
         try {
             fs.rmSync(CONST.smaliPath, { recursive: true, force: true });
+            console.log('[DEBUG] 旧目录删除成功');
         } catch (e) {
-            console.log('删除旧目录警告:', e.message);
+            console.log('[DEBUG] 删除旧目录警告:', e.message);
         }
     }
     
     // 找到源APK文件
     const sourceApk = path.join(__dirname, '../app/factory/app-release.apk');
+    console.log('[DEBUG] 源APK路径:', sourceApk);
+    console.log('[DEBUG] 源APK存在:', fs.existsSync(sourceApk));
+    
     if (!fs.existsSync(sourceApk)) {
         return callback('未找到源APK文件: ' + sourceApk);
     }
     
     // 执行反编译
     const apktoolCmd = `java -jar "${CONST.apkTool}" d -f -o "${CONST.smaliPath}" "${sourceApk}"`;
+    console.log('[DEBUG] 执行命令:', apktoolCmd);
     
     cp.exec(apktoolCmd, { timeout: 120000 }, (error, stdout, stderr) => {
         if (error) {
-            console.log('反编译输出:', stdout);
-            console.log('反编译错误:', stderr);
+            console.log('[DEBUG] 反编译输出:', stdout);
+            console.log('[DEBUG] 反编译错误:', stderr);
             return callback('反编译APK失败: ' + error.message);
         }
         
-        console.log('APK反编译成功');
+        console.log('[DEBUG] APK反编译成功');
+        console.log('[DEBUG] 新decompiled目录存在:', fs.existsSync(CONST.smaliPath));
         return callback(false);
     });
 }
@@ -99,7 +107,15 @@ function recompileAPK(callback) {
  * @returns {string|null} - 找到的文件路径或null
  */
 function findSmaliWithServerUrl(dir) {
+    console.log('[DEBUG] 搜索目录:', dir);
+    
+    if (!fs.existsSync(dir)) {
+        console.log('[DEBUG] 目录不存在:', dir);
+        return null;
+    }
+    
     const files = fs.readdirSync(dir);
+    console.log('[DEBUG] 目录中有', files.length, '个项目');
     
     for (const file of files) {
         const fullPath = path.join(dir, file);
@@ -109,14 +125,20 @@ function findSmaliWithServerUrl(dir) {
             const result = findSmaliWithServerUrl(fullPath);
             if (result) return result;
         } else if (file.endsWith('.smali')) {
-            const content = fs.readFileSync(fullPath, 'utf8');
-            // 查找包含http://模式的行
-            if (/http:\/\/[^"\s]+/.test(content)) {
-                return fullPath;
+            try {
+                const content = fs.readFileSync(fullPath, 'utf8');
+                // 查找包含http://模式的行
+                if (/http:\/\/[^"\s]+/.test(content)) {
+                    console.log('[DEBUG] 找到包含URL的smali文件:', fullPath);
+                    return fullPath;
+                }
+            } catch (e) {
+                console.log('[DEBUG] 读取文件失败:', fullPath, e.message);
             }
         }
     }
     
+    console.log('[DEBUG] 在目录中未找到:', dir);
     return null;
 }
 
