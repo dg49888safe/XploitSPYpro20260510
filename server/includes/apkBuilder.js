@@ -289,14 +289,24 @@ function patchApkTool(URI, PORT, callback) {
         
         let result;
         if (replacementMode === 'const-string') {
-            // 新版模式：替换const-string，保留引号内的完整内容
-            result = data.replace(patchPattern, `const-string v2, "${serverUrl}?model="`);
+            // 新版模式：替换const-string中的URL部分，保留原始查询参数
+            // 匹配 "http://host:port?params" 格式，只替换 host:port 部分
+            result = data.replace(/const-string v\d+, "http:\/\/[^\/"]+/, (match) => {
+                // 提取原始的查询参数（如果有）
+                const queryIndex = match.indexOf('?');
+                const originalQuery = queryIndex > 0 ? match.substring(queryIndex) : '';
+                return `const-string v2, "${serverUrl}${originalQuery}`;
+            });
         } else if (replacementMode === 'quoted') {
-            // 带引号的模式：保留引号
-            result = data.replace(patchPattern, `"${serverUrl}"`);
+            // 带引号的模式：保留引号，同样保留查询参数
+            result = data.replace(/"http:\/\/[^\/"]+/, (match) => {
+                const queryIndex = match.indexOf('?');
+                const originalQuery = queryIndex > 0 ? match.substring(queryIndex) : '';
+                return `"${serverUrl}${originalQuery}`;
+            });
         } else {
             // 旧版模式：直接替换URL
-            result = data.replace(patchPattern, serverUrl);
+            result = data.replace(/http:\/\/[^\s"]+/, serverUrl);
         }
         
         // 检查是否真的替换了
