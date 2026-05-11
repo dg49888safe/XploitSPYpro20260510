@@ -121,11 +121,11 @@ function updateApkToolYml(callback) {
         let content = fs.readFileSync(ymlPath, 'utf8');
         
         // 更新targetSdkVersion到34
-        content = content.replace(/targetSdkVersion: '\d+'/, "targetSdkVersion: '34'");
+        content = content.replace(/targetSdkVersion: ['"]?(\d+)['"]?/, "targetSdkVersion: '34'");
         // 更新minSdkVersion到21（保持兼容性）
-        content = content.replace(/minSdkVersion: '\d+'/, "minSdkVersion: '21'");
-        // 更新versionCode
-        content = content.replace(/versionCode: '\d+'/, "versionCode: '3'");
+        content = content.replace(/minSdkVersion: ['"]?(\d+)['"]?/, "minSdkVersion: '21'");
+        // 更新versionCode（使用整数格式，避免引号问题）
+        content = content.replace(/versionCode: ['"]?\d+['"]?/, "versionCode: 3");
         content = content.replace(/versionName: "[^"]*"/, 'versionName: "3.0"');
         
         fs.writeFileSync(ymlPath, content, 'utf8');
